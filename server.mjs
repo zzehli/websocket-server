@@ -1,7 +1,13 @@
 import { createServer } from 'http';
+import crypto from 'crypto'
 const PORT = 8080;
 const MAGIC_STRING = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
-import crypto from 'crypto'
+const SEVEN_BITS_PAYLOAD_LEN = 125
+const SIXTEEN_BITS_PAYLOAD_LEN = 126
+const SIXTYFOUR_BITS_PAYLOAD_LEN = 127
+
+//Bytes have 8 places, so the left-most place is 27 (or 128)
+const FIRST_BIT = 128
 
 const server = createServer((request, response) => {
     response.writeHead(200);
@@ -11,17 +17,28 @@ const server = createServer((request, response) => {
 
 server.on('upgrade', onSocketUpgrade);
 
+//establish handshake
+//refers to 4.2.1. Reading the Client's Opening Handshake
 function onSocketUpgrade(req, socket, head) {
-    const {'sec-websocket-key': webClientSocketKey} = req.headers
-    console.log( `${webClientSocketKey} connected` );
+    const { 'sec-websocket-key': webClientSocketKey } = req.headers
+    console.log(`${webClientSocketKey} connected`);
     const headers = createHandShakeHeader(webClientSocketKey);
     socket.write(headers);
+    socket.on('readable', () => onSocketReadable(socket) )
 }
 
-// HTTP/1.1 101 Switching Protocols
-// Upgrade: websocket
-// Connection: Upgrade
-// Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+function onSocketReadable(socket) {
+    //consume optcode (first byte)
+    socket.read(1);
+
+    //check payload len, starting after the MASK bit
+    const [markerPayloadLen] = socket.read(1)
+    const PayloadLen = markerPayloadLen - FIRST_BIT
+
+    let messageLength = 0
+
+
+}
 
 function createHandShakeHeader(id) {
     const acceptKey = createSocketAccept(id)
@@ -35,12 +52,12 @@ function createHandShakeHeader(id) {
     return headers;
 }
 
-// https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#miscellaneous
 function createSocketAccept(id) {
-    const hash =  crypto.createHash('sha1')
+    const hash = crypto.createHash('sha1')
     hash.update(id + MAGIC_STRING)
     return hash.digest('base64')
 }
+
 //error handling
 [
     "uncaughtException",
