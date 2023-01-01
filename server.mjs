@@ -5,6 +5,8 @@ const MAGIC_STRING = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 const SEVEN_BITS_PAYLOAD_SWITCH = 125
 const SIXTEEN_BITS_PAYLOAD_SWITCH  = 126
 const SIXTYFOUR_BITS_PAYLOAD_SWITCH = 127
+
+const MAX_SIXTEEN_BITS_MSG_LEN= 2 ** 16 // 0 to 65536
 const MASKING_KEY_LEN_BYTES = 4
 //Bytes have 8 places, so the left-most place is 2 to the 7th power (or 128)
 const FIRST_BIT = 128
@@ -41,13 +43,22 @@ function prepareMessage(message) {
     const messageSize = msg.length
 
     let dataFrameBuffer;
-    let offset;
 
     //first byte is text data (0x80 is 128 and 0x01 is OPCODE_TEXT)
     const firstByte = 0x80 | 0x01 
     if (messageSize <= SEVEN_BITS_PAYLOAD_SWITCH) {
         const bytes = [firstByte];
         dataFrameBuffer = Buffer.from(bytes.concat(messageSize));
+    } else if (messageSize < MAX_SIXTEEN_BITS_MSG_LEN) {
+        //allocate four bytes
+        const target = Buffer.allocUnsafe(4)
+        //OPCODE
+        target[0] = firstByte;
+        //payload indicator
+        target[1] = SIXTEEN_BITS_PAYLOAD_SWITCH;
+        //put message size at the next 2 bytes
+        target.writeUint16BE(messageSize, 2);
+        dataFrameBuffer = target;
     } else {
         throw new Error('message too long');
     }
@@ -75,13 +86,15 @@ function onSocketReadable(socket) {
 
     //check payload len, starting after the MASK bit
     const [markerPayloadLen] = socket.read(1);
-    const PayloadLen = markerPayloadLen - FIRST_BIT;
+    const payloadIndicator = markerPayloadLen - FIRST_BIT;
 
     let messageLength = 0;
-    if(PayloadLen <= SEVEN_BITS_PAYLOAD_SWITCH){
-        messageLength = PayloadLen;
+    if(payloadIndicator <= SEVEN_BITS_PAYLOAD_SWITCH){
+        messageLength = payloadIndicator;
+    } else if (payloadIndicator == SIXTEEN_BITS_PAYLOAD_SWITCH) {
+        messageLength = socket.read(2).readUint16BE(0);
     } else {
-        throw new Error(`your msg is too long`);
+        throw new Error('your message is too long!')
     }
 
     const maskingKey = socket.read(MASKING_KEY_LEN_BYTES);
@@ -103,15 +116,15 @@ function onSocketReadable(socket) {
 function unmask(encodedBuffer, maskingKey) {
     //https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers
     // Create the byte Array of decoded payload
-
-    const final = Uint8Array.from(encodedBuffer, (elt, i) => elt ^ maskingKey[i % 4]); // Perform an XOR on the mask
-    return Buffer.from(final)
     //alternative: 
-    // const finalBuffer = Buffer.from(encodedBuffer);
-    // for (let index = 0; index < encodedBuffer.length; index++) {
-    //     finalBuffer[index] = encodedBuffer[index] ^ maskingKey[index % 4];
-    // }
-    // return finalBuffer
+
+    // const final = Uint8Array.from(encodedBuffer, (elt, i) => elt ^ maskingKey[i % 4]); // Perform an XOR on the mask
+    // return Buffer.from(final)
+    const finalBuffer = Buffer.from(encodedBuffer);
+    for (let index = 0; index < encodedBuffer.length; index++) {
+        finalBuffer[index] = encodedBuffer[index] ^ maskingKey[index % 4];
+    }
+    return finalBuffer
 }
 
 function createHandShakeHeader(id) {

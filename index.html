@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Websocket Client</title>
 </head>
+
 <body>
     <output id="messages"></output>
     <script>
@@ -15,17 +17,41 @@
             console.log('websocket connected');
             const id = Math.round(Math.random() * 100)
             console.log('sending...', id)
-            const data = JSON.stringify({
-                id,
-                name: `[${id}] Jae Li`,
-                profession: 'software developer'
-            });
+            const intervalID = setInterval(() => {
 
-            socket.send(data);
+                const data = JSON.stringify([{
+                    id: `${id}`,
+                    name: `[${id}] Jae Li`,
+                    profession: 'Software Developer',
+                },
+                {
+                    id: `${id}`,
+                    name: `[${id}] A Wong`,
+                    profession: 'Frontend developer',
+                },
+                {
+                    id: `${id}`,
+                    name: `[${id}] Yik Fui`,
+                    profession: 'Backend developer',
+                }
+                ]);
+
+                socket.send(data);
+            }, 1000);
+
+            setTimeout(() => {
+                clearInterval(intervalID);
+            }, 5000);
+
         }
-        socket.onmessage = (msg) => console.log('I got a message! ', msg)
-        socket.onerror = (error) => console.error (`websocket error `, error)
+        socket.onmessage = (msg) => {
+            const message = msg.data;
+            console.log('I got a message! ', msg);
+            messages.innerHTML += `<br/> ${message}`;
+        }
+        socket.onerror = (error) => console.error(`websocket error `, error)
         socket.onclose = (event) => console.log('Disconnected')
     </script>
 </body>
+
 </html>
