@@ -9,45 +9,32 @@
 </head>
 
 <body>
-    <output id="messages"></output>
+    <form>
+        <input type = "text" placeholder="Your message...">
+    </form>
+    <output id="messages"></output>   
     <script>
         const messages = document.getElementById("messages")
+        
         const socket = new WebSocket('ws://localhost:8080')
+
         socket.onopen = (event) => {
             console.log('websocket connected');
-            const id = Math.round(Math.random() * 100)
-            console.log('sending...', id)
-            const intervalID = setInterval(() => {
-
-                const data = JSON.stringify([{
-                    id: `${id}`,
-                    name: `[${id}] Jae Li`,
-                    profession: 'Software Developer',
-                },
-                {
-                    id: `${id}`,
-                    name: `[${id}] A Wong`,
-                    profession: 'Frontend developer',
-                },
-                {
-                    id: `${id}`,
-                    name: `[${id}] Yik Fui`,
-                    profession: 'Backend developer',
-                }
-                ]);
-
-                socket.send(data);
-            }, 1000);
-
-            setTimeout(() => {
-                clearInterval(intervalID);
-            }, 5000);
+            document.querySelector('form').onsubmit = ev => {
+            ev.preventDefault();
+            const input = document.querySelector('input');
+            const msg = input.value
+            socket.send(msg);
+            input.value = '';
+            messages.innerHTML += `<br/> sent: ${msg}`;
+            }
+            
 
         }
         socket.onmessage = (msg) => {
             const message = msg.data;
             console.log('I got a message! ', msg);
-            messages.innerHTML += `<br/> ${message}`;
+            messages.innerHTML += `<br/> received: ${message}<br/>`;
         }
         socket.onerror = (error) => console.error(`websocket error `, error)
         socket.onclose = (event) => console.log('Disconnected')
