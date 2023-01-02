@@ -6,35 +6,45 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Websocket Client</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+    <div id="messages"></div>
     <form>
         <input type = "text" placeholder="Your message...">
     </form>
-    <output id="messages"></output>   
     <script>
         const messages = document.getElementById("messages")
-        
+
         const socket = new WebSocket('ws://localhost:8080')
+
+        function showMessage(text, isMine = false) {
+            document.getElementById("messages").innerHTML += `
+                <div class="message-row ${isMine ? 'mine' : 'theirs'}">
+                    <div class="text-bubble">${text}</div>
+                </div>
+            `;
+        }
 
         socket.onopen = (event) => {
             console.log('websocket connected');
             document.querySelector('form').onsubmit = ev => {
-            ev.preventDefault();
-            const input = document.querySelector('input');
-            const msg = input.value
-            socket.send(msg);
-            input.value = '';
-            messages.innerHTML += `<br/> sent: ${msg}`;
+                ev.preventDefault();
+                const input = document.querySelector('input');
+                const msg = input.value
+                socket.send(msg);
+                input.value = '';
+                // messages.innerHTML += `<br/> sent: ${msg}`;
+                showMessage(msg, true);
             }
-            
 
         }
         socket.onmessage = (msg) => {
             const message = msg.data;
             console.log('I got a message! ', msg);
-            messages.innerHTML += `<br/> received: ${message}<br/>`;
+            // messages.innerHTML += `<br/> received: ${message}<br/>`;
+            showMessage(message);
         }
         socket.onerror = (error) => console.error(`websocket error `, error)
         socket.onclose = (event) => console.log('Disconnected')

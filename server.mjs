@@ -19,6 +19,8 @@ const server = createServer((request, response) => {
 
 server.on('upgrade', onSocketUpgrade);
 
+var socketPool = [];
+
 //establish handshake
 //refers to 4.2.1. Reading the Client's Opening Handshake
 //upgrade is a http client request: https://nodejs.org/api/http.html#event-upgrade
@@ -27,8 +29,8 @@ function onSocketUpgrade(req, socket, head) {
     //console.log(`${webClientSocketKey} connected`);
     const headers = createHandShakeHeader(webClientSocketKey);
     socket.write(headers);
+    socketPool.push(socket);
     socket.on('readable', () => onSocketReadable(socket))
-   
 }
 
 //create the handshake header, including the acceptkey according to 1.3 Opening Handshake
@@ -73,8 +75,10 @@ function onSocketReadable(socket) {
     const encoded = socket.read(messageLength);
     let msg = unmask(encoded, maskingKey);
     console.log('received: ' + msg.toString());
-    msg = msg + ' uuid: ' + crypto.randomUUID();
-    sendMessage(msg, socket);
+    // msg = msg + ' uuid: ' + crypto.randomUUID();
+    socketPool.filter(c => c !== socket)
+    .forEach((item) => sendMessage(msg, item));
+    // sendMessage(msg, socket);
 }
 
 //unmask encoded data from client, refer to 5.3Client-to-Server Masking
