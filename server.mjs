@@ -71,14 +71,12 @@ function onSocketReadable(socket) {
     }
 
     const maskingKey = socket.read(MASKING_KEY_LEN_BYTES);
-    //encoded is a buffer, encoded by masking key
+    //`encoded` is a buffer, it is masked by the masking key
     const encoded = socket.read(messageLength);
     let msg = unmask(encoded, maskingKey);
     console.log('received: ' + msg.toString());
-    // msg = msg + ' uuid: ' + crypto.randomUUID();
     socketPool.filter(c => c !== socket)
     .forEach((item) => sendMessage(msg, item));
-    // sendMessage(msg, socket);
 }
 
 //unmask encoded data from client, refer to 5.3Client-to-Server Masking
