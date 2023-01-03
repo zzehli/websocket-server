@@ -1,5 +1,5 @@
 # Websocket Server
-This is a barebone websocket server built according to [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455.html). The server has two main components: making the handshake (upgrade from HTTP to WebSocket protocol) and handling data frames (how messages are transmitted through the protocol). The server handles messages up to 16 bits.
+This is a barebone websocket server built according to [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455.html). The server simulates a chat room where messages from one user is broadcasted to all users connected to the server. The server has two main components: making the handshake (upgrade from HTTP to WebSocket protocol) and handling data frames (how messages are transmitted through the protocol). The server handles messages up to 16 bits.
 
 [Demo](https://youtu.be/JYwp9gHwf9w)
 
